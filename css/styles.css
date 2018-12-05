@@ -442,7 +442,7 @@ body {
   line-height: 130%;
 
   /* мой стиль */
-  word-wrap: break-word;
+  /* word-wrap: break-word; */
 }
 
 .comments__body input, .comments__body textarea {

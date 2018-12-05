@@ -1,5 +1,5 @@
 //сниппет для создания формы - нового комментария
-let commentFormTamplate = `<form class="comments__form" data-coords="24:148" style="top: 148px; left: 24px;">
+const commentFormTamplate = `<form class="comments__form" data-coords="24:148" style="top: 148px; left: 24px;">
         <span class="comments__marker"></span>
         <input type="checkbox" class="comments__marker-checkbox">
         <div class="comments__body">
@@ -19,10 +19,11 @@ let commentFormTamplate = `<form class="comments__form" data-coords="24:148" sty
       </form>`;
 
 //навешиваем на Картинку слушатель чтобы создавать на ней комменты
-image.addEventListener("click", event => {
+image.addEventListener("click", createComment);
+
+function createComment(event) {
   //если включен режим Комментарии то мы создаем новые комментарии при клике
   if (modeItems[1].dataset.state === "selected") {
-    console.log("image click mousemove event===", event);
     if (newComment) {
       //если открыта форма добавления коммента, то двигаем ее
       newComment.style.top = `${event.offsetY}px`;
@@ -39,9 +40,11 @@ image.addEventListener("click", event => {
       newComment.dataset.coords = `${event.offsetX}:${event.offsetY}`;
     }
   } //END main if
-}); // END image click listener commenting
+}//END f createComment
 
-commentsBox.addEventListener("click", event => {
+commentsBox.addEventListener("click", shrinkComment);
+
+function shrinkComment(event) {
   //если мы кликнули по маркеру, он раскрылся, и это не новая форма добавляения коммента
   if (
     event.target.classList.contains("comments__marker-checkbox") &&
@@ -60,10 +63,12 @@ commentsBox.addEventListener("click", event => {
       newComment = null; //очищаем переменную НОВОГО КОММЕНТАРИЯ
     }
   } //END main if
-}); // END lisctener
+}//END f shrinkComment
 
 //сворачиваем коммент при нажатии ЗАКРЫТь
-commentsBox.addEventListener("click", event => {
+commentsBox.addEventListener("click", closeComment);
+
+function closeComment(event) {
   if (event.target.classList.contains("comments__close")) {
     event.preventDefault();
     //сворачиваем всю форму:
@@ -76,13 +81,14 @@ commentsBox.addEventListener("click", event => {
       newComment = null; //очищаем переменную НОВОГО КОММЕНТАРИЯ
     }
   }
-}); // END comments__close lisctener
+}//END f closeComment
 
 // нажатие ОТПРАВИТЬ в форме комментария
-commentsBox.addEventListener("click", event => {
+commentsBox.addEventListener("click", submitComment);
+
+function submitComment(event) {
   if (event.target.classList.contains("comments__submit")) {
     event.preventDefault();
-    console.log("comment submit clicked!");
     //проверяем есть ли набранный текст для нового комментария
     if (event.target.previousElementSibling.previousElementSibling.value) {
       //убираем класс нового комментария
@@ -108,7 +114,6 @@ commentsBox.addEventListener("click", event => {
         leftValue +
         "&top=" +
         topValue;
-      console.log("body for POST comment===", body);
       //очищаем поле ввода комментария
       event.target.previousElementSibling.previousElementSibling.value = "";
 
@@ -130,7 +135,6 @@ commentsBox.addEventListener("click", event => {
 
       xhrComment.addEventListener("load", () => {
         if (xhrComment.status === 200) {
-          console.log("xhrComment.response===", xhrComment.response);
         } else {
           showHideError(
             true,
@@ -151,7 +155,7 @@ commentsBox.addEventListener("click", event => {
       xhrComment.send(body);
     } //END 2 if
   } //END main if
-}); // END comments__submit lisctener
+}//END f submitComment
 
 // слушатели на переключателе ПОКАЗАТЬ/СКРЫТЬ комментарии
 commentsOn.addEventListener("change", showHideComments);
@@ -177,26 +181,22 @@ function showHideComments() {
 //функция получает объект состоящий из всех комментариев картинки, и расставляет их по рабочей поверхности:
 function insertComments(commentsObject) {
   resizeCommentsBox();
-  console.log("f insertComments()");
   if (!commentsObject) return;
   let commentsIdsArray = Object.keys(commentsObject);
   commentsIdsArray.forEach(elem => {
     //перебираем комментарии используя массив их Id
-    console.log("inserting comment id===", elem);
     handleCommentEvent(commentsObject[elem]);
   });
 } //END f insertComments
 
 //функция обрабатываем объект комментария находит/создает ему форму
 function handleCommentEvent(commentData) {
-  console.log("got commentEventData===", commentData);
   if (
     document.querySelector(
       `[data-coords="${commentData.left}:${commentData.top}"]`
     )
   ) {
     //если уже есть такая форма в разметке, то делаем:
-    console.log("выставляем коммент в существующую форму");
     placeComment(
       commentData,
       document.querySelector(
@@ -216,23 +216,22 @@ function handleCommentEvent(commentData) {
 
 //функция получает комментарий и форму, куда его надо вставить
 function placeComment(commentData, form) {
-  // console.log('получена comment timestamp ===',commentData.timestamp);
   let date = new Date(commentData.timestamp);
-  console.log("got comment date===", date);
-  //это вставляемый сниппет отправленного коммента
-  let commentTamplate = `<div class="comment">
-                          <p class="comment__time">${date.getDate()}.${date.getMonth() +
-    1}.${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</p>
-                          <p class="comment__message">${commentData.message}</p>
-                        </div>`;
+  let commentsBody = form.querySelector('.comments__body');
+
+  let commentDiv = document.createElement('div');
+  commentDiv.innerHTML += `<p class="comment__time">${date.getDate()}.${date.getMonth() +
+      1}.${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</p>`;
+  commentDiv.classList.add('comment');
+  let splittedMessage = commentData.message.split('\\n');
+  splittedMessage.forEach(elem => commentDiv.innerHTML += `<p class="comment__message">${elem}</p>`);
   //ниже определяем элемент коммент Лоадера, перед которым вставляем коммент
   let loaderDiv = form.querySelector(".loader").parentElement;
-  loaderDiv.insertAdjacentHTML("beforebegin", commentTamplate);
+  commentsBody.insertBefore(commentDiv, loaderDiv);
 } // END f placeComment
 
 //функция подгоняет размеры элемента commentsBox под элемент image
 function resizeCommentsBox() {
-  console.log("f resizeCommentsBox()");
   let imageBounds = image.getBoundingClientRect();
   commentsBox.style.left = `${imageBounds.left}px`;
   commentsBox.style.top = `${imageBounds.top}px`;

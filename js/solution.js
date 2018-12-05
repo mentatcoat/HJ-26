@@ -1,5 +1,5 @@
 `use strict`;
-//форматирование prettier-atom package
+
 
 let wrapApp = document.querySelector(".wrap.app"); //главный контейнер
 wrapApp.style.position = "relative";
@@ -24,13 +24,11 @@ let WSConnection; //переменная WebSocket соединения
 let canvas;
 let ctx;
 let drawingColor; // цвет рисования
+let fileInput;
 
 ///// ///// ///// /////
-console.log("history===", history);
-console.log("history state===", history.state);
 //при движении по Истории запускаем функцию init, которая загружает нужное состояние приложения
 window.addEventListener("popstate", event => {
-  console.log("popstate event===", event);
   init();
 });
 /// ///
@@ -52,9 +50,7 @@ document.querySelector(".new").removeEventListener("click", clickOnMode);
 
 //листенер клик на кнопках режимов
 function clickOnMode(event) {
-  modeItems.forEach((elem, index) => {
-    elem.dataset.state = "";
-  });
+  modeItems.forEach((elem, index) => elem.dataset.state = "");
   event.currentTarget.dataset.state = "selected";
   menu.dataset.state = "selected";
   fixMenuBounds(); //корректировка развалившегося меню
@@ -62,27 +58,30 @@ function clickOnMode(event) {
 /// ///
 
 //включаем рисование режим
-modeItems[2].addEventListener("click", event => {
+modeItems[2].addEventListener("click", clickDrawMode);
+/// ///
+function clickDrawMode() {
   initCanvasListeners();
   canvas.style.pointerEvents = "auto"; //включаем реагирование Канвас
   resizeCanvas(); // подгоняем размеры Канвас под картинку
-}); //END
-/// ///
+}//END f clickDrawMode
+
+
 
 // режим Поделиться, клик, создание ссылки URL с параметрами
-modeItems[3].addEventListener("click", event => {
-  console.log("mode share URLid===", placedImageId);
-  // создаем и присваиваем URL с параметрами
-  document.querySelector(".menu__url").value =
-    location.href.split("?")[0] + "?id=" + placedImageId;
-});
+modeItems[3].addEventListener("click", clickShareMode);
 /// ///
+function clickShareMode() {
+  // создаем и присваиваем URL с параметрами
+  document.querySelector(".menu__url").value = location.href.split("?")[0] + "?id=" + placedImageId;
+}//END f clickShareMode
+
 
 // слушаетель кнопки КОПИРОВАТЬ
 document.querySelector(".menu_copy").addEventListener("click", event => {
   document.querySelector(".menu__url").select(); //выделяем содержимое input элемента
   // ниже копируем в буфер выделенное, и выводим в консоль статус операции
-  console.log("buffer copy===", document.execCommand("copy"));
+  document.execCommand("copy");
 });
 /// ///
 
@@ -90,31 +89,35 @@ document.querySelector(".menu_copy").addEventListener("click", event => {
 // fixColor('green');// выставляем первый цвет по умолчанию Зеленый
 
 //нажатие на бургер
-document.querySelector(".burger").addEventListener("click", () => {
+document.querySelector(".burger").addEventListener("click", clickBurger);
+/// ///
+function clickBurger() {
   menu.dataset.state = "default";
-  modeItems.forEach((elem, index) => {
-    elem.dataset.state = "";
-  });
+  modeItems.forEach((elem, index) => elem.dataset.state = "");
   canvas.style.pointerEvents = "none"; //отключаем реакции canvas-элемента
   if (newComment) {
     newComment.remove(); //удаляем форму нов коммента
     newComment = null;
   }
   fixMenuBounds(); //починка развалившегося меню
-}); //END burger lisctener
-/// ///
+}// END f clickBurger
+
+
 
 //drag & drop of MENU перетаскивание
-document.querySelector(".drag").addEventListener("mousedown", event => {
+document.querySelector(".drag").addEventListener("mousedown", mousedownToDrag);
+/// ///
+function mousedownToDrag() {
   movedMenu = menu; //помещаем меню в переменную для перетаскивания
   menuBounds = menu.getBoundingClientRect();
   //ниже смещение координат клика мыши от left и top меню
   deltaX = event.pageX - menuBounds.x;
   deltaY = event.pageY - menuBounds.y;
-});
-/// ///
+}// END f mousedownOnDrag
 
-document.addEventListener("mousemove", event => {
+document.addEventListener("mousemove", mousemoveMenu);
+/// ///
+function mousemoveMenu() {
   if (movedMenu) {
     //если меню в режиме перетаскивания, то:
     event.preventDefault();
@@ -133,23 +136,21 @@ document.addEventListener("mousemove", event => {
     //новые вычисленные координаты меню сохраняем в localStorage и в меню
     movedMenu.style.left = localStorage.menuLeft = `${x}px`;
     movedMenu.style.top = localStorage.menuTop = `${y}px`;
-  } //END if
-}); //END mousemove listener
-/// ///
+  }
+}//END f mousemoveMenu
+
 
 //если мышь отпустили, то меню становится статичным
-document.addEventListener("mouseup", event => {
-  if (movedMenu) {
-    movedMenu = null;
-  } //END main if
-}); //END
+document.addEventListener("mouseup", event => {if (movedMenu) movedMenu = null}); //END
 /// ///
 
 /// /// забрасывание файла на рабочую поверхность
-wrapApp.addEventListener("dragover", event => {
-  event.preventDefault();
-});
-wrapApp.addEventListener("drop", dropEvent => {
+wrapApp.addEventListener("dragover", event => event.preventDefault());
+
+wrapApp.addEventListener("drop", placeDroppedImage);
+/// ///
+
+function placeDroppedImage(dropEvent) {
   dropEvent.preventDefault();
   if (image.src !== firstImageSrc) {
     //ошибка, если уже есть размещенное фото
@@ -165,7 +166,7 @@ wrapApp.addEventListener("drop", dropEvent => {
     dropEvent.dataTransfer.files[0].type === "image/png" ||
     dropEvent.dataTransfer.files[0].type === "image/jpeg"
   ) {
-    sendDroppedFile(dropEvent.dataTransfer.files[0]); //если формат проходит=> отправляем файл на сервер
+    sendXHR("POST", dropEvent.dataTransfer.files[0]); //если формат проходит=> отправляем файл на сервер
   } //END if
   else {
     showHideError(
@@ -174,8 +175,10 @@ wrapApp.addEventListener("drop", dropEvent => {
     ); // показываем ошибку формата файла
     setTimeout(() => showHideError(false), 3000);
   }
-}); //END drop listener
-/// ///
+}//END f placeDroppedImage
+
+
+
 
 //загрузка фото на сервер приводит к загрузке фото в <img>
 image.addEventListener("load", () => {
@@ -189,44 +192,32 @@ image.addEventListener("load", () => {
 init();
 // инициализация первоначального состояния приложения (обновления)
 function init() {
-  console.log("f init()");
   // проверяем если ли параметры в URL открытой вкладки
-  if (getURLid() !== null) {
+  if (getURLid() !== null && history.state === null) {
     //начинаем загружать картинку и инфу по ней с сервера
-    getIdImage(getURLid());
+    sendXHR( "GET", null, getURLid());
     modeItems[1].click(); //включаем режим Комментирования
   } else if (history.state !== null) {
     //если в истории сохранен id, то мы его загружаем с сервера
-    console.log("need run getIdImage(history.state.id)");
     //чистим маски и комментарии и канву
-    clearImageAndMask();
-    commentsBox.innerHTML = "";
-    for (let can of document.querySelectorAll("canvas")) {
-      can.remove();
-    }
-    getIdImage(history.state.id);
+    clearImage_Mask_Comments();
+    sendXHR( "GET", null, history.state.id);
     modeItems[3].click(); //включаем режим поделиться
   } else {
     // если нет URL id и history.state то обычная загрузка
     menu.dataset.state = "initial"; //первоначальное состояние меню
-    modeItems.forEach((elem, index) => {
-      elem.dataset.state = "";
-    });
+    modeItems.forEach((elem, index) => elem.dataset.state = "");
     //чистим маски и комментарии и канву
-    clearImageAndMask();
-    commentsBox.innerHTML = "";
-    for (let can of document.querySelectorAll("canvas")) {
-      can.remove();
-    }
+    clearImage_Mask_Comments();
   } //END main else
 
-  canvas = document.createElement("canvas");
-  console.log("canvas in init()===", canvas);
-  canvas.style.position = "absolute";
-  canvas.style.pointerEvents = "none";
-  wrapApp.appendChild(canvas);
-  ctx = canvas.getContext("2d");
-
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    canvas.style.position = "absolute";
+    canvas.style.pointerEvents = "none";
+    wrapApp.appendChild(canvas);
+    ctx = canvas.getContext("2d");
+  }
   /// /// выставляем позицию Меню, с учетом сохраненной ранее позиции
   localStorage.menuLeft
     ? (menu.style.left = localStorage.menuLeft)
@@ -236,45 +227,50 @@ function init() {
     : (menu.style.top = `calc(40% - ${menuBounds.height / 2}px)`);
 
   /// ///создаем input для загрузки файла из диалог окна
-  let fileInput = document.createElement("input");
+  if(!fileInput) createFileInputElement();
+
+} //END f init
+///// ///// ///// /////
+
+function createFileInputElement() {
+  fileInput = document.createElement("input");
   fileInput.setAttribute("type", "file");
   fileInput.setAttribute("accept", "image/png,image/jpeg"); /// !!! не работает accept атрибут
   fileInput.classList.add("file-input"); // навешиваем класс для инпута
   //добавляем инпут в ДОМ-дерево
   document.querySelector(".new").appendChild(fileInput);
   //слушатель на изменения состояния input
-  fileInput.addEventListener("change", event => {
-    /// делаем проверку MIME типа, так как атрибут accept не фильтрует
-    if (
-      event.currentTarget.files[0].type === "image/png" ||
-      event.currentTarget.files[0].type === "image/jpeg"
-    ) {
-      sendDroppedFile(event.currentTarget.files[0]); //высылаем файл на сервер, и получаем URL размещенного файла, запоминаем его
-    } //END if
-    else {
-      // показываем ошибку формата файла и прячем ее
-      showHideError(
-        true,
-        "Неверный формат файла. Пожалуйста, выберите изображение в формате .jpg или .png."
-      );
-      setTimeout(() => showHideError(false), 3000);
-    }
-  }); //END change listener
-  console.log("f init() fulfilled");
-} //END f init
-///// ///// ///// /////
+  fileInput.addEventListener("change", fileInputOnChange);
+}//END f createFileInputElement
+
+function fileInputOnChange(event) {
+  /// делаем проверку MIME типа, так как атрибут accept не фильтрует
+  if (
+    event.currentTarget.files[0].type === "image/png" ||
+    event.currentTarget.files[0].type === "image/jpeg"
+  ) {
+    sendXHR("POST",event.currentTarget.files[0]); //высылаем файл на сервер, и получаем URL размещенного файла, запоминаем его
+  } //END if
+  else {
+    // показываем ошибку формата файла и прячем ее
+    showHideError(
+      true,
+      "Неверный формат файла. Пожалуйста, выберите изображение в формате .jpg или .png."
+    );
+    setTimeout(() => showHideError(false), 3000);
+  }
+}//END f fileInputOnChange
 
 function openWSConnection() {
   //функция создает соединение WebSocket
   WSConnection = new WebSocket(
     `wss://neto-api.herokuapp.com/pic/${placedImageId}`
   );
-  WSConnection.addEventListener("open", () =>
-    console.log("WSConnection open", WSConnection)
-  );
-  WSConnection.addEventListener("error", event =>
-    console.log("WSConnection error===", event.data)
-  );
+
+  WSConnection.addEventListener("error", event => {
+    showHideError(true, "Ошибка WebSocket");
+    setTimeout(() => showHideError(false), 3000);
+  });
 
   WSConnection.addEventListener("message", event => {
     //в зависимости от типа event, загружаем комменты, или маску
@@ -301,14 +297,12 @@ function showHideError(status, messageText) {
 
 //функция для восстановления развалившегося меню
 function fixMenuBounds() {
-  console.log("f fixMenuBounds()");
   menuBounds = menu.getBoundingClientRect(); // определение текущих границ элемента Меню
   //если высота меню стала больше чем постоянная высота 'элемента меню умноженного на 1.2', значит меню развалилось => мы исправляем позицию меню
   if (
     document.querySelector(".drag").getBoundingClientRect().height * 1.2 <
     menuBounds.height
   ) {
-    console.log("fixing menu bounds");
     menu.style.left = 0; //сдвигаем меню в крайнюю левую точку, чтобы узнать его искомую длину
     menuBounds = menu.getBoundingClientRect(); // определение текущих границ элемента Меню
     let delta = window.innerWidth - menuBounds.width; //находим нужный отступ
@@ -318,21 +312,20 @@ function fixMenuBounds() {
 /// ///
 
 // функция для очистки загруженной картинки и удаления всех "масок"
-function clearImageAndMask() {
+function clearImage_Mask_Comments() {
   let images = Array.from(document.querySelectorAll(".current-image"));
   images.shift();
   //удаляем все теги img кроме первого - image
   images.forEach((el, index) => el.remove());
   image.src = "";
+  commentsBox.innerHTML = "";
 } //END f clearImageAndMask
 /// ///
 
 function getURLid() {
   //функция возвращает id картинки из URL вкладки, или null
-  console.log("f getURLid()");
   let regExpId = /^id=(.)*/;
   let rightURL = location.href.split("?")[1]; //все что после ?
-  console.log("rightURL===", rightURL);
   if (!rightURL) return null; //если нет правой стороны => null
   let idProp = rightURL.split("&").find(el => regExpId.test(el));
   if (!idProp) return null; // если нет поля Id в URL то возвращ null
@@ -340,61 +333,12 @@ function getURLid() {
 } //END f getURLid
 /// ///
 
-function getIdImage(id) {
-  //функция получает ID и загружает с сервера данные этой картинки
-  console.log("f getIdImage() id===", id);
-  if (!id) return;
-  placedImageId = id;
-  let xhr = new XMLHttpRequest();
-  xhr.addEventListener("loadstart", () => {
-    //показываем прелоадер
-    imageLoaderDiv.style.display = "block";
-  });
-
-  xhr.addEventListener("load", () => {
-    if (xhr.status === 200) {
-      //показываем размещенное фото на рабочей области
-      image.src = JSON.parse(xhr.response).url;
-      //открываем WS соединение под загруженную картинку
-      openWSConnection();
-      //начинаем подгружать комменты :
-      if (JSON.parse(xhr.response).comments)
-        insertComments(JSON.parse(xhr.response).comments);
-      // подгружаем маску картинки из ссылки:
-      if (JSON.parse(xhr.response).mask)
-        insertMask(JSON.parse(xhr.response).mask);
-    } else {
-      showHideError(true, "Ошибка протокола HTTP"); //
-      setTimeout(() => showHideError(false), 3000);
-    }
-  }); //END xhr 'load' event
-
-  xhr.addEventListener("loadend", () => {
-    imageLoaderDiv.style.display = "none"; //убираем прелоадер
-  });
-  xhr.addEventListener("error", () => {
-    showHideError(true, "Сетевая ошибка."); // показываем ошибку сети события xhr
-    setTimeout(() => showHideError(false), 3000);
-  });
-
-  xhr.open("GET", `https://neto-api.herokuapp.com/pic/${id}`);
-  xhr.send();
-} //END getIdImage
-/// ///
-
-function sendDroppedFile(droppedFile) {
+function sendXHR(method, droppedFile = null, id = null) {
   //отправляем на сервер удачный файл droppedFile
+  if (method === "GET" && !id) return;
+  if (method === "GET") placedImageId = id;
 
   let xhr = new XMLHttpRequest();
-  let formData = new FormData();
-  let blobFile = new Blob([droppedFile], { type: droppedFile.type });
-  formData.append("title", "Picture");
-  formData.append("image", blobFile);
-  //проверка внутренностей форм дейты
-  for (let [k, s] of formData) {
-    console.log("k=", k, "s=", s);
-  }
-
   xhr.addEventListener("loadstart", () => {
     //показываем прелоадер
     imageLoaderDiv.style.display = "block";
@@ -403,9 +347,7 @@ function sendDroppedFile(droppedFile) {
   xhr.addEventListener("load", () => {
     if (xhr.status === 200) {
       //чистим маски и комментарии от старой картинки
-      clearImageAndMask();
-      commentsBox.innerHTML = "";
-
+      clearImage_Mask_Comments();
       //сохраняем URL размещенной фотографии
       placedImageId = JSON.parse(xhr.response).id;
       //показываем размещенное фото на рабочей области
@@ -413,9 +355,18 @@ function sendDroppedFile(droppedFile) {
       //открываем WS соединение под загруженную картинку
       openWSConnection();
 
+      //начинаем подгружать комменты :
+      if (JSON.parse(xhr.response).comments)
+        insertComments(JSON.parse(xhr.response).comments);
+      // подгружаем маску картинки из ссылки:
+      if (JSON.parse(xhr.response).mask)
+        insertMask(JSON.parse(xhr.response).mask);
+
       //т.к. картинка будет загружена на холст, мы создаем новую запись в хистори
-      history.pushState({ id: placedImageId }, "");
-      modeItems[3].click(); //вызываем режим share
+      if(method === "POST") {
+        history.pushState({ id: placedImageId }, "", `?id=${placedImageId}`);
+        modeItems[3].click(); //вызываем режим share
+      }
     } else {
       showHideError(true, "Ошибка протокола HTTP"); //
       setTimeout(() => showHideError(false), 3000);
@@ -431,7 +382,17 @@ function sendDroppedFile(droppedFile) {
     setTimeout(() => showHideError(false), 3000);
   });
 
-  xhr.open("POST", "https://neto-api.herokuapp.com/pic");
-  xhr.send(formData);
-} //END f sendDroppedFile
+  if(method === "POST") {
+    let formData = new FormData();
+    let blobFile = new Blob([droppedFile], { type: droppedFile.type });
+    formData.append("title", "Picture");
+    formData.append("image", blobFile);
+
+    xhr.open("POST", "https://neto-api.herokuapp.com/pic");
+    xhr.send(formData);
+  } else if (method === "GET") {
+    xhr.open("GET", `https://neto-api.herokuapp.com/pic/${id}`);
+    xhr.send();
+  }
+} //END f sendXHR
 ///// ///// ///// /////

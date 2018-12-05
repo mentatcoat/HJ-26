@@ -1,6 +1,10 @@
 ///// ///// ///// /////РИСОВАНИЕ в CANVAS
 fixColor("green"); // выставляем первый цвет по умолчанию Зеленый
 
+let inside = false; //переменная говорит что курсор внутри Канвы
+let pointX = null; //стартовые точки рисования
+let pointY = null;
+
 //навесили слушатели всем input radio выбор цвета
 Array.from(document.querySelectorAll(".menu__color")).forEach(menuColor => {
   menuColor.addEventListener("click", event => {
@@ -11,20 +15,15 @@ Array.from(document.querySelectorAll(".menu__color")).forEach(menuColor => {
 //функция навешивающая слушатели элементу Canvas
 function initCanvasListeners() {
   canvas.addEventListener("mousedown", () => {
-    // console.log('mousedown event in canvas');
     inside = true;
   });
   canvas.addEventListener("mousemove", drawMouse);
-  canvas.addEventListener("mouseleave", () => (inside = false));
+  canvas.addEventListener("mouseleave", () => inside = false);
 } //END initCanvasListeners
 
-let inside = false; //переменная говорит что курсор внутри Канвы
-let pointX = null; //стартовые точки рисования
-let pointY = null;
 
 //функция подгоняет размеры элемента CANVAS под элемент image
 function resizeCanvas() {
-  console.log("f resizeCanvas()");
   let imageBounds = image.getBoundingClientRect();
   canvas.style.left = `${imageBounds.left}px`;
   canvas.style.top = `${imageBounds.top}px`;
@@ -58,7 +57,6 @@ function drawMouse(e) {
 
 ///функция которая выставляет оттенок по переданному значению-строке
 function fixColor(color) {
-  console.log("fixColor got color===", color);
   switch (color) {
     case "red":
       drawingColor = "#ea5d56";
@@ -77,6 +75,7 @@ function fixColor(color) {
       break;
   }
 } //END f fixColor
+
 //функция проверяющая что нажата левая кнопка мыши
 function isButtonPressed(buttonCode, pressed) {
   return (pressed & buttonCode) === buttonCode;
@@ -84,7 +83,6 @@ function isButtonPressed(buttonCode, pressed) {
 
 function saveStroke() {
   //функция сохранения фрагмента рисунка пользователя
-  console.log("f saveSroke()");
   let base64 = canvas.toDataURL();
   let newImg = image.cloneNode();
   newImg.src = base64;
