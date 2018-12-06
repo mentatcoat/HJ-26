@@ -7,30 +7,31 @@ let pointY = null;
 
 //навесили слушатели всем input radio выбор цвета
 Array.from(document.querySelectorAll(".menu__color")).forEach(menuColor => {
-  menuColor.addEventListener("click", event => {
-    fixColor(event.currentTarget.value); //устанавливаем цвет рисования
-  });
+  menuColor.addEventListener("click", clickOnColor);
 }); // END слушатели для menuColors
+function clickOnColor(event) {
+  fixColor(event.currentTarget.value); //устанавливаем цвет рисования
+}
 
 //функция навешивающая слушатели элементу Canvas
 function initCanvasListeners() {
-  canvas.addEventListener("mousedown", () => {
-    inside = true;
-  });
+  canvas.addEventListener("mousedown", makeInsideTrueFalse);
   canvas.addEventListener("mousemove", drawMouse);
-  canvas.addEventListener("mouseleave", () => inside = false);
+  canvas.addEventListener("mouseleave", makeInsideTrueFalse);
 } //END initCanvasListeners
 
+function makeInsideTrueFalse(event) {
+  event.type === 'mousedown' ? inside = true : inside = false;
+}
 
 //функция подгоняет размеры элемента CANVAS под элемент image
 function resizeCanvas() {
-  let imageBounds = image.getBoundingClientRect();
+  const imageBounds = image.getBoundingClientRect();
   canvas.style.left = `${imageBounds.left}px`;
   canvas.style.top = `${imageBounds.top}px`;
   canvas.height = imageBounds.height;
   canvas.width = imageBounds.width;
 } //END f resizeClearCanvas
-/// ///
 
 //функция рисования по Канве
 function drawMouse(e) {
@@ -55,7 +56,7 @@ function drawMouse(e) {
   }
 } //END drawMouse
 
-///функция которая выставляет оттенок по переданному значению-строке
+//функция которая выставляет оттенок по переданному значению-строке
 function fixColor(color) {
   switch (color) {
     case "red":
@@ -83,15 +84,14 @@ function isButtonPressed(buttonCode, pressed) {
 
 function saveStroke() {
   //функция сохранения фрагмента рисунка пользователя
-  let base64 = canvas.toDataURL();
-  let newImg = image.cloneNode();
+  const base64 = canvas.toDataURL();
+  const newImg = image.cloneNode();
   newImg.src = base64;
   newImg.style.pointerEvents = "none";
-  wrapApp.insertBefore(newImg, errorDiv); //добавили слой своего рисунка в разметку, после всех <img>
+  wrapApp.insertBefore(newImg, errorDiv);
+  //добавили слой своего рисунка в разметку, после всех <img>
   //отправили фрагмент своего рисунка на сервер
-  canvas.toBlob(blobFile => {
-    WSConnection.send(blobFile);
-  });
+  canvas.toBlob(blobFile => WSConnection.send(blobFile));
   //чистим канвас
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 } // END f saveSroke
@@ -113,11 +113,9 @@ let saveStrokeDebounced = debounce(saveStroke, 3000);
 //функция для вставки маски по URL
 function insertMask(maskURL) {
   if (!maskURL) return;
-  let mask = image.cloneNode(); //создаем маску на основе image
+  const mask = image.cloneNode(); //создаем маску на основе image
   mask.style.pointerEvents = "none"; //отключаем чувствительность к мыши
   mask.src = maskURL;
   wrapApp.insertBefore(mask, errorDiv); //добавили маску в разметку
 } //END insertMask
-/// ///
-
 ///// ///// ///// /////конец РИСОВАНИЕ
