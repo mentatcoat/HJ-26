@@ -1,4 +1,6 @@
 `use strict`;
+//деструктирующее присваиваение, 
+
 
 const wrapApp = document.querySelector(".wrap.app"); //главный контейнер
 wrapApp.style.position = "relative";
@@ -302,8 +304,7 @@ function fixMenuBounds() {
 
 // функция для очистки загруженной картинки и удаления всех "масок"
 function clearImage_Mask_Comments() {
-  const images = Array.from(document.querySelectorAll(".current-image"));
-  images.shift();
+  const [, ...images] = Array.from(document.querySelectorAll(".current-image"));
   //удаляем все теги img кроме первого - image
   images.forEach((el) => el.remove());
   image.src = "";
