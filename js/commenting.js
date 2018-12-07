@@ -212,10 +212,9 @@ function placeComment(commentData, form) {
 
   const commentDiv = document.createElement('div');
   commentDiv.innerHTML += `<p class="comment__time">${date.getDate()}.${date.getMonth() +
-      1}.${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</p>`;
+      1}.${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</p>
+      <p class="comment__message">${commentData.message.replace(/\\n/g, '<br>')}</p>`;
   commentDiv.classList.add('comment');
-  let splittedMessage = commentData.message.split('\\n');
-  splittedMessage.forEach(elem => commentDiv.innerHTML += `<p class="comment__message">${elem}</p>`);
   //ниже определяем элемент коммент Лоадера, перед которым вставляем коммент
   const loaderDiv = form.querySelector(".loader").parentElement;
   commentsBody.insertBefore(commentDiv, loaderDiv);
