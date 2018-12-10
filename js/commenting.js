@@ -92,50 +92,25 @@ function submitComment(event) {
     event.preventDefault();
     //проверяем есть ли набранный текст для нового комментария
     if (event.target.previousElementSibling.previousElementSibling.value) {
+      const str = event.target.previousElementSibling.previousElementSibling.value;
       //убираем класс нового комментария
       event.target.parentElement.parentElement.classList.remove("new-com");
       //оставляем коммент раскрытым:
       event.target.parentElement.previousElementSibling.checked = true;
       newComment = null; //очищаем переменную формы добавления
       //отправляем коммент на сервер
-      let xhrComment = new XMLHttpRequest();
+      const xhrComment = new XMLHttpRequest();
+      xhrComment.preloader = event.target.previousElementSibling.previousElementSibling.previousElementSibling;//тут прелоадер этого комментария
       const [leftValue, topValue] = event.target.parentElement.parentElement.dataset.coords.split(":");
       //создаем body для отправки методом POST:
-      const body =
-        "message=" +
-        encodeURIComponent(
-          event.target.previousElementSibling.previousElementSibling.value
-        ) +
-        "&left=" +
-        leftValue +
-        "&top=" +
-        topValue;
+      const body = `message=${encodeURIComponent(convertBreakLine(str))}&left=${leftValue}&top=${topValue}`;
       //очищаем поле ввода комментария
       event.target.previousElementSibling.previousElementSibling.value = "";
 
-      xhrComment.addEventListener("loadstart", () => {
-        //показываем прелоадер - смнимаем с div класс hidden
-        event.target.previousElementSibling.previousElementSibling.previousElementSibling.classList.toggle(
-          "hidden"
-        );
-      });
-      xhrComment.addEventListener("loadend", () => {
-        event.target.previousElementSibling.previousElementSibling.previousElementSibling.classList.toggle(
-          "hidden"
-        );
-      });
-      xhrComment.addEventListener("error", event => {
-        showHideError(true, event.message); //
-        setTimeout(() => showHideError(false), 3000);
-      });
-
-      xhrComment.addEventListener("load", () => {
-        if (xhrComment.status === 200) {
-        } else {
-          showHideError(true, commentHTTPErrorMessage); //
-          setTimeout(() => showHideError(false), 3000);
-        }
-      }); //END load listener
+      xhrComment.addEventListener("loadstart", submitComment_onloadstart);
+      xhrComment.addEventListener("loadend", submitComment_onloadend);
+      xhrComment.addEventListener("error", submitComment_onerror);
+      xhrComment.addEventListener("load", submitComment_onload); //END load listener
 
       xhrComment.open(
         "POST",
@@ -146,9 +121,41 @@ function submitComment(event) {
         "application/x-www-form-urlencoded"
       );
       xhrComment.send(body);
-    } //END 2 if
+    } //END second if
   } //END main if
 }//END f submitComment
+
+function submitComment_onloadstart(event) {
+  //показываем прелоадер - смнимаем с div класс hidden
+  event.currentTarget.preloader.classList.toggle("hidden");
+}
+
+function submitComment_onload(event) {
+  if (event.currentTarget.status !== 200) {
+    showHideError(true, commentHTTPErrorMessage); //
+    setTimeout(() => showHideError(false), 3000);
+  }
+}
+
+function submitComment_onloadend(event) {
+  //показываем прелоадер - смнимаем с div класс hidden
+  event.currentTarget.preloader.classList.toggle("hidden");
+}
+
+function submitComment_onerror(event) {
+    showHideError(true, event.message); //
+    setTimeout(() => showHideError(false), 3000);
+}
+
+//функция берет строку и возвращает строку с символами '\n' вместо переносов
+function convertBreakLine(str) {
+  const nextArray = str.split('').reduce(function (memo, el) {
+    if(el.charCodeAt(0) === 10) el = '\\n';
+    memo.push(el);
+    return memo;
+  }, []);
+  return nextArray.join('');
+}//end f convertBreakLine
 
 // слушатели на переключателе ПОКАЗАТЬ/СКРЫТЬ комментарии
 commentsOn.addEventListener("change", showHideComments);
@@ -180,7 +187,7 @@ function insertComments(commentsObject) {
   commentsIdsArray.forEach(elem => handleCommentEvent(commentsObject[elem]));
 } //END f insertComments
 
-//функция обрабатываем объект комментария находит/создает ему форму
+//функция обрабатывает объект комментария находит/создает ему форму
 function handleCommentEvent(commentData) {
   if (
     document.querySelector(
@@ -195,25 +202,25 @@ function handleCommentEvent(commentData) {
       )
     );
   } else {
-    //создаем новую форму, заполняем шаблоном, прописываем свойства из события
+    //создаем новую форму, заполняем шаблоном, прописываем свойства
     commentsBox.innerHTML += commentFormTamplate;
     const newForm = commentsBox.lastElementChild;
     newForm.style.top = `${commentData.top}px`;
-    newForm.style.left = `${commentData.left}px`; //!!!эксперимент
+    newForm.style.left = `${commentData.left}px`;
     newForm.dataset.coords = `${commentData.left}:${commentData.top}`;
     placeComment(commentData, newForm);
   }
 } //END f handleCommentEvent
 
 //функция получает комментарий и форму, куда его надо вставить
-function placeComment(commentData, form) {
-  const date = new Date(commentData.timestamp);
+function placeComment({timestamp, message}, form) {
+  const date = new Date(timestamp);
   const commentsBody = form.querySelector('.comments__body');
 
   const commentDiv = document.createElement('div');
   commentDiv.innerHTML += `<p class="comment__time">${date.getDate()}.${date.getMonth() +
       1}.${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</p>
-      <p class="comment__message">${commentData.message.replace(/\\n/g, '<br>')}</p>`;
+      <p class="comment__message">${message.replace(/\\n/g, '<br>')}</p>`;
   commentDiv.classList.add('comment');
   //ниже определяем элемент коммент Лоадера, перед которым вставляем коммент
   const loaderDiv = form.querySelector(".loader").parentElement;

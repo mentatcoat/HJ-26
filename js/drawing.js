@@ -108,7 +108,7 @@ function debounce(callback, delay) {
 } //END f debounce
 
 //создаем дебаунс-версию фукнции saveSroke
-let saveStrokeDebounced = debounce(saveStroke, 3000);
+let saveStrokeDebounced = debounce(saveStroke, 1000);
 
 //функция для вставки маски по URL
 function insertMask(maskURL) {

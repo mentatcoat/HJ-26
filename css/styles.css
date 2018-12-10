@@ -24,9 +24,6 @@ body {
   -moz-user-select: none;
   -webkit-user-select: none;
   user-select: none;
-
-/*  мой стиль*/
-  /* position: relative; */
 }
 
 .menu {
@@ -370,16 +367,9 @@ body {
   left: calc(3 * var(--menu-left));
 }
 
-
 .comments__form.new-com .comments__body {/*   мой стиль !!!  */
     display: block;
   }
-
-
-
-
-
-
 
 .comments__marker {
   position: absolute;
@@ -440,9 +430,6 @@ body {
 .comment__message {
   color: #ffffff;
   line-height: 130%;
-
-  /* мой стиль */
-  /* word-wrap: break-word; */
 }
 
 .comments__body input, .comments__body textarea {
@@ -594,15 +581,10 @@ body {
   margin-top: 2rem;
 }
 
-
 /* мой стиль */
 .hidden {
   display: none;
 }
-
-
-
-
 
 .loader {
   height: 3rem;
@@ -694,8 +676,8 @@ body {
   display: inline-block;
 }
 
+/* мой стиль */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~ file input ~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
 
 .file-input {
   position: absolute;
@@ -706,9 +688,4 @@ body {
   height: 100%;
   opacity: 0;
   cursor: pointer;
-  /* visibility: hidden; */
-  /* pointer-events: none; */
-  /* font-size: 0; */
-  /* border: 1px solid #51606e; */
-  /* z-index: 1000; */
 }

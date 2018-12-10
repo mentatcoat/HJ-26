@@ -1,6 +1,4 @@
 `use strict`;
-//деструктирующее присваиваение, 
-
 
 const wrapApp = document.querySelector(".wrap.app"); //главный контейнер
 wrapApp.style.position = "relative";
@@ -9,7 +7,6 @@ let menuBounds = menu.getBoundingClientRect(); // определение тек�
 const modeItems = Array.from(document.querySelectorAll(".mode")); //массив кнопок режимов
 const image = document.querySelector(".current-image"); //элемент с размещенной картинкой
 const firstImageSrc = image.src; //первичное состояние, для проверки на drag&drop
-//чтобы картинка не таскалась по экрану если кликнуть и потянуть:
 let placedImageId; //сохраняем сюда ID картинки с сервера
 const errorDiv = document.querySelector(".error"); //элемент показывающий ошибку
 const imageLoaderDiv = document.querySelector(".image-loader"); //прелоадер
@@ -24,13 +21,12 @@ let WSConnection; //переменная WebSocket соединения
 let canvas;
 let ctx;
 let drawingColor; // цвет рисования
-let fileInput;
+let fileInput;//переменная для создания внутреннего инпута(type 'file') в кнопке меню
 const instructionToLoadNewFile = 'Чтобы загрузить новое изображение, пожалуйста, воспользуйтесь пунктом "Загрузить новое" в меню.';
 const instructionToWrongMime = "Неверный формат файла. Пожалуйста, выберите изображение в формате .jpg или .png.";
 const HTTPErrorMessage = "Ошибка протокола HTTP";
 const netErrorMessage = "Сетевая ошибка.";
 const websocketErrorMessage = "Ошибка WebSocket";
-
 
 //при движении по Истории запускаем функцию init, которая загружает нужное состояние приложения
 window.addEventListener("popstate", init);
@@ -44,11 +40,8 @@ function fixOnWindowResize() {
   resizeCommentsBox(); //подгонка блока комментариев под картинку
 }//END f fixOnWindowResize
 
-
 // вешаем кнопкам-модам листенеры
-modeItems.forEach((modeItem) => {
-  modeItem.addEventListener("click", clickOnMode);
-}); //END
+modeItems.forEach((modeItem) => modeItem.addEventListener("click", clickOnMode)); //END
 //убираем листенер с мод нью, т к у него особое поведение при клике
 document.querySelector(".new").removeEventListener("click", clickOnMode);
 
@@ -86,8 +79,6 @@ function clickCopyButton() {
   // ниже копируем в буфер выделенное, и выводим в консоль статус операции
   document.execCommand("copy");
 }// END f clickCopyButton
-
-//??? эта функция не подтянулась из js файла загруженного ниже. Но при этом переменная canvas из этого файла, загрузилась в следующем-нижнем js файле. Почему?
 
 //нажатие на бургер
 document.querySelector(".burger").addEventListener("click", clickBurger);
@@ -168,7 +159,7 @@ function placeDroppedImage(dropEvent) {
     dropEvent.dataTransfer.files[0].type === "image/jpeg"
   ) {
     sendXHR("POST", dropEvent.dataTransfer.files[0]); //если формат проходит=> отправляем файл на сервер
-  } //END if
+  }
   else {
     showHideError(true, instructionToWrongMime); // показываем ошибку формата файла
     setTimeout(() => showHideError(false), 3000);
@@ -184,6 +175,7 @@ function loadOnImage() {
   fixMenuBounds();
 }
 image.addEventListener("dragstart", dragstartOnImage);
+
 function dragstartOnImage(event) {
   event.preventDefault()
 }
@@ -198,7 +190,6 @@ function init() {
     modeItems[1].click(); //включаем режим Комментирования
   } else if (history.state !== null) {
     //если в истории сохранен id, то мы его загружаем с сервера
-    //чистим маски и комментарии и канву
     sendXHR( "GET", null, history.state.id);
     modeItems[3].click(); //включаем режим поделиться
   } else {
@@ -207,7 +198,7 @@ function init() {
     modeItems.forEach((elem, index) => elem.dataset.state = "");
     //чистим маски и комментарии и канву
     clearImage_Mask_Comments();
-  } //END main else
+  }
 
   if (!canvas) {
     canvas = document.createElement("canvas");
@@ -246,7 +237,7 @@ function fileInputOnChange(event) {
     event.currentTarget.files[0].type === "image/jpeg"
   ) {
     sendXHR("POST",event.currentTarget.files[0]); //высылаем файл на сервер, и получаем URL размещенного файла, запоминаем его
-  } //END if
+  }
   else {
     // показываем ошибку формата файла и прячем ее
     showHideError(true, instructionToWrongMime);
@@ -261,12 +252,16 @@ function openWSConnection() {
     `wss://neto-api.herokuapp.com/pic/${placedImageId}`
   );
 
-  WSConnection.addEventListener("error", event => {
+  WSConnection.addEventListener("error", WSErrorHandler);
+  WSConnection.addEventListener("message", WSMessageHandler);
+} //END f openWSConnection
+
+function WSErrorHandler(event) {
     showHideError(true, websocketErrorMessage);
     setTimeout(() => showHideError(false), 3000);
-  });
+}
 
-  WSConnection.addEventListener("message", event => {
+function WSMessageHandler(event) {
     //в зависимости от типа event, загружаем комменты, или маску
     if (JSON.parse(event.data).event === "comment") {
       handleCommentEvent(JSON.parse(event.data).comment);
@@ -274,8 +269,7 @@ function openWSConnection() {
     if (JSON.parse(event.data).event === "mask") {
       insertMask(JSON.parse(event.data).url);
     }
-  });
-} //END f openWSConnection
+}
 
 // функция получает true или false - показывает или скрывает ошибку с заданным MESSAGE
 function showHideError(status, messageText) {
@@ -327,46 +321,11 @@ function sendXHR(method, droppedFile = null, id = null) {
   if (method === "GET") placedImageId = id;
 
   const xhr = new XMLHttpRequest();
-  xhr.addEventListener("loadstart", () => {
-    //показываем прелоадер
-    imageLoaderDiv.style.display = "block";
-  });
-
-  xhr.addEventListener("load", () => {
-    if (xhr.status === 200) {
-      //чистим маски и комментарии от старой картинки
-      clearImage_Mask_Comments();
-      //сохраняем URL размещенной фотографии
-      placedImageId = JSON.parse(xhr.response).id;
-      //показываем размещенное фото на рабочей области
-      image.src = JSON.parse(xhr.response).url;
-      //открываем WS соединение под загруженную картинку
-      openWSConnection();
-
-      //начинаем подгружать комменты :
-      if (JSON.parse(xhr.response).comments)
-        insertComments(JSON.parse(xhr.response).comments);
-      // подгружаем маску картинки из ссылки:
-      if (JSON.parse(xhr.response).mask)
-        insertMask(JSON.parse(xhr.response).mask);
-
-      //т.к. картинка будет загружена на холст, мы создаем новую запись в хистори
-      if(method === "POST") {
-        history.pushState({ id: placedImageId }, "", `?id=${placedImageId}`);
-        modeItems[3].click(); //вызываем режим share
-      }
-    } else {
-      showHideError(true, HTTPErrorMessage); //
-      setTimeout(() => showHideError(false), 3000);
-    }
-  });
-
-  xhr.addEventListener("loadend", () => imageLoaderDiv.style.display = "none"); //убираем прелоадер
-
-  xhr.addEventListener("error", () => {
-    showHideError(true, netErrorMessage); // показываем ошибку сети события xhr
-    setTimeout(() => showHideError(false), 3000);
-  });
+  xhr.method = method;//!!! так можно делать-создавать новое свойство в xhr-объекте?
+  xhr.addEventListener("loadstart", sendXHRonloadstart);
+  xhr.addEventListener("load", sendXHRonload);
+  xhr.addEventListener("loadend", sendXHRonloadend); //убираем прелоадер
+  xhr.addEventListener("error", sendXHRonerror);
 
   if(method === "POST") {
     const formData = new FormData();
@@ -381,4 +340,49 @@ function sendXHR(method, droppedFile = null, id = null) {
     xhr.send();
   }
 } //END f sendXHR
+
+function sendXHRonloadstart() {
+    //показываем прелоадер
+    imageLoaderDiv.style.display = "block";
+}
+
+function sendXHRonload(event) {
+
+  if (event.currentTarget.status === 200) {
+    //чистим маски и комментарии от старой картинки
+    clearImage_Mask_Comments();
+    //сохраняем URL размещенной фотографии
+    placedImageId = JSON.parse(event.currentTarget.response).id;
+    //показываем размещенное фото на рабочей области
+    image.src = JSON.parse(event.currentTarget.response).url;
+    //открываем WS соединение под загруженную картинку
+    openWSConnection();
+
+    //начинаем подгружать комменты :
+    if (JSON.parse(event.currentTarget.response).comments)
+      insertComments(JSON.parse(event.currentTarget.response).comments);
+    // подгружаем маску картинки из ссылки:
+    if (JSON.parse(event.currentTarget.response).mask)
+      insertMask(JSON.parse(event.currentTarget.response).mask);
+
+    //т.к. картинка будет загружена на холст, мы создаем новую запись в хистори
+    if(event.currentTarget.method === "POST") {
+      history.pushState({ id: placedImageId }, "", `?id=${placedImageId}`);
+      modeItems[3].click(); //вызываем режим share
+    }
+  } else {
+    showHideError(true, HTTPErrorMessage); //
+    setTimeout(() => showHideError(false), 3000);
+  }
+}//END f sendXHRonload
+
+function sendXHRonloadend() {
+  imageLoaderDiv.style.display = "none";
+}
+
+function sendXHRonerror() {
+    showHideError(true, netErrorMessage); // показываем ошибку сети события xhr
+    setTimeout(() => showHideError(false), 3000);
+}
+
 ///// ///// ///// /////
